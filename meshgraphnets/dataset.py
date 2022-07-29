@@ -47,7 +47,9 @@ def _parse(proto, meta):
 
 def load_dataset(path, split):
   """Load dataset."""
+
   with open(os.path.join(path, 'meta.json'), 'r') as fp:
+
     meta = json.loads(fp.read())
   ds = tf.data.TFRecordDataset(os.path.join(path, split+'.tfrecord'))
   ds = ds.map(functools.partial(_parse, meta=meta), num_parallel_calls=8)
@@ -57,6 +59,7 @@ def load_dataset(path, split):
 
 def add_targets(ds, fields, add_history):
   """Adds target and optionally history fields to dataframe."""
+
   def fn(trajectory):
     out = {}
     for key, val in trajectory.items():

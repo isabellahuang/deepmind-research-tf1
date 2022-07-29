@@ -25,6 +25,8 @@ from meshgraphnets import cfd_eval
 from meshgraphnets import cfd_model
 from meshgraphnets import cloth_eval
 from meshgraphnets import cloth_model
+from meshgraphnets import deforming_plate_model
+from meshgraphnets import deforming_plate_eval
 from meshgraphnets import core_model
 from meshgraphnets import dataset
 
@@ -32,7 +34,7 @@ from meshgraphnets import dataset
 FLAGS = flags.FLAGS
 flags.DEFINE_enum('mode', 'train', ['train', 'eval'],
                   'Train model, or run evaluation.')
-flags.DEFINE_enum('model', None, ['cfd', 'cloth'],
+flags.DEFINE_enum('model', None, ['cfd', 'cloth', 'deforming_plate'],
                   'Select model to run.')
 flags.DEFINE_string('checkpoint_dir', None, 'Directory to save checkpoint')
 flags.DEFINE_string('dataset_dir', None, 'Directory to load dataset from.')
@@ -40,20 +42,23 @@ flags.DEFINE_string('rollout_path', None,
                     'Pickle file to save eval trajectories')
 flags.DEFINE_enum('rollout_split', 'valid', ['train', 'test', 'valid'],
                   'Dataset split to use for rollouts.')
-flags.DEFINE_integer('num_rollouts', 10, 'No. of rollout trajectories')
+flags.DEFINE_integer('num_rollouts', 2, 'No. of rollout trajectories')
 flags.DEFINE_integer('num_training_steps', int(10e6), 'No. of training steps')
+
+
 
 PARAMETERS = {
     'cfd': dict(noise=0.02, gamma=1.0, field='velocity', history=False,
                 size=2, batch=2, model=cfd_model, evaluator=cfd_eval),
     'cloth': dict(noise=0.003, gamma=0.1, field='world_pos', history=True,
-                  size=3, batch=1, model=cloth_model, evaluator=cloth_eval)
+                  size=3, batch=1, model=cloth_model, evaluator=cloth_eval),
+    'deforming_plate': dict(noise=3e-3, gamma=0.1, field='world_pos', noise_field='world_pos', history=False,
+                  size=3, batch=1, model=deforming_plate_model, evaluator=deforming_plate_eval),
 }
-
 
 def learner(model, params):
   """Run a learner job."""
-  ds = dataset.load_dataset(FLAGS.dataset_dir, 'train')
+  ds = dataset.load_dataset(FLAGS.dataset_dir, 'train') 
   ds = dataset.add_targets(ds, [params['field']], add_history=params['history'])
   ds = dataset.split_and_preprocess(ds, noise_field=params['field'],
                                     noise_scale=params['noise'],
@@ -76,11 +81,11 @@ def learner(model, params):
   with tf.train.MonitoredTrainingSession(
       hooks=[tf.train.StopAtStepHook(last_step=FLAGS.num_training_steps)],
       checkpoint_dir=FLAGS.checkpoint_dir,
-      save_checkpoint_secs=600) as sess:
+      save_checkpoint_secs=180) as sess:
 
     while not sess.should_stop():
       _, step, loss = sess.run([train_op, global_step, loss_op])
-      if step % 1000 == 0:
+      if step % 100 == 0:
         logging.info('Step %d: Loss %g', step, loss)
     logging.info('Training complete.')
 
