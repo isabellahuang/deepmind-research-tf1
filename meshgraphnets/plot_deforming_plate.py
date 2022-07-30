@@ -57,6 +57,7 @@ def main(unused_argv):
 
     faces = rollout_data[traj]['faces'][step]
     ax.scatter(pos[:, 0], pos[:, 1], pos[:, 2])
+    # ax.scatter(gt_pos[:, 0], gt_pos[:, 1], gt_pos[:, 2])
 
     ax.set_title('Trajectory %d Step %d' % (traj, step))
     return fig,
